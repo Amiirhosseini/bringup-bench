@@ -1,0 +1,8 @@
+services:
+  bringup:
+    build: .
+    ports:
+      - "8790:8790"
+    environment:
+      BRINGUP_API_HOST: 0.0.0.0
+    restart: unless-stopped
