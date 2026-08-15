@@ -1,0 +1,19 @@
+board: nucleo-f411-devkit
+mcu: STM32F411CEU6
+buses:
+  i2c1:
+    pins: { scl: PB8, sda: PB9 }
+    pullups: 4k7
+  spi1:
+    pins: { sck: PA5, miso: PA6, mosi: PA7, cs: PA4 }
+  usart2:
+    pins: { tx: PA2, rx: PA3 }
+    fixture_baud: 57600
+devices:
+  - name: opt3001
+    bus: i2c1
+    addr: 0x44
+  - name: imu-lsm6
+    bus: spi1
+    spi_mode: 0
+    int1: PB4
