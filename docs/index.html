@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Bringup Bench — Live Demo</title>
-  <meta name="description" content="Interactive MCU bring-up lab: I2C NACK, SPI mode mismatch, clock gates, agent plans. Static GitHub Pages demo." />
+  <title>Bringup Bench — Interactive live lab</title>
+  <meta name="description" content="Touchable MCU bring-up lab in the browser. Change I2C address, SPI mode, UART baud, clock gates — traces and findings update live." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -19,287 +19,357 @@
       --warn: #d4b84a;
       --crit: #e06b6b;
       --accent: #5ee0a8;
-      --i2c: #5ee0a8;
-      --spi: #6ab4ff;
-      --uart: #e0b45e;
-      --gpio: #c98cff;
+      --fw: #6ab4ff;
+      --hw: #e0b45e;
     }
     * { box-sizing: border-box; }
     body {
       margin: 0;
       font-family: "IBM Plex Sans", sans-serif;
-      background:
-        linear-gradient(180deg, #0c1612 0%, var(--bg) 40%),
-        var(--bg);
+      background: radial-gradient(900px 500px at 80% -10%, #143328 0%, transparent 55%), var(--bg);
       color: var(--text);
       min-height: 100vh;
     }
-    a { color: var(--accent); text-decoration: none; }
-    a:hover { text-decoration: underline; }
-    .wrap { max-width: 1080px; margin: 0 auto; padding: 1.75rem 1.2rem 3rem; }
-    .brand {
-      font-family: "IBM Plex Mono", monospace;
-      font-size: 0.78rem;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: var(--accent);
+    a { color: var(--accent); }
+    .wrap { max-width: 1180px; margin: 0 auto; padding: 1.4rem 1rem 3rem; }
+    .brand { font-family: "IBM Plex Mono", monospace; font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); }
+    h1 { font-family: "IBM Plex Mono", monospace; font-size: clamp(1.35rem, 3vw, 1.85rem); margin: 0.3rem 0 0.4rem; }
+    .sub { color: var(--muted); max-width: 46rem; margin: 0 0 1rem; }
+    .layout { display: grid; grid-template-columns: 320px 1fr; gap: 0.9rem; }
+    @media (max-width: 860px) { .layout { grid-template-columns: 1fr; } }
+    .panel { background: var(--panel); border: 1px solid var(--line); padding: 0.85rem; }
+    .panel h2 { margin: 0 0 0.65rem; font-size: 0.92rem; }
+    .hint { color: var(--muted); font-size: 0.78rem; margin: 0 0 0.7rem; }
+    label { display: block; font-size: 0.78rem; color: var(--muted); margin: 0.45rem 0 0.2rem; }
+    select, input[type="number"] {
+      width: 100%; background: #0a120f; color: var(--text);
+      border: 1px solid var(--line); padding: 0.4rem 0.45rem;
+      font: 0.88rem "IBM Plex Mono", monospace;
     }
-    h1 {
-      font-family: "IBM Plex Mono", monospace;
-      font-size: clamp(1.45rem, 3vw, 2rem);
-      margin: 0.35rem 0 0.5rem;
-    }
-    .sub { color: var(--muted); max-width: 42rem; margin: 0 0 1rem; }
-    .row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
+    .toggle { display: flex; align-items: center; gap: 0.45rem; margin: 0.4rem 0; font-size: 0.88rem; }
+    .row { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.6rem; }
     button, .btn {
-      appearance: none;
-      border: 1px solid var(--line);
-      background: #14221c;
-      color: var(--text);
-      font: 500 0.88rem "IBM Plex Sans", sans-serif;
-      padding: 0.5rem 0.8rem;
-      cursor: pointer;
+      appearance: none; border: 1px solid var(--line); background: #14221c;
+      color: var(--text); font: 500 0.82rem "IBM Plex Sans", sans-serif;
+      padding: 0.42rem 0.65rem; cursor: pointer;
     }
-    button.active, button:hover, .btn:hover { border-color: var(--accent); color: #fff; }
-    button.primary { background: #163528; border-color: #2a6a4e; }
-    .stats {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
-      gap: 0.55rem;
-      margin-bottom: 1rem;
-    }
-    .stat {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      padding: 0.8rem;
-    }
-    .stat b { display: block; font-family: "IBM Plex Mono", monospace; font-size: 1.35rem; }
-    .stat span { color: var(--muted); font-size: 0.8rem; }
-    .panel {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      padding: 0.95rem;
-      margin-bottom: 0.9rem;
-    }
-    .panel h2 { margin: 0 0 0.7rem; font-size: 0.98rem; }
-    table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
-    th, td { text-align: left; padding: 0.45rem 0.35rem; border-bottom: 1px solid var(--line); }
+    button:hover, .btn:hover { border-color: var(--accent); }
+    button.active { border-color: var(--accent); background: #163528; }
+    button.probe { background: #1e4f73; border-color: #2f79ad; width: 100%; margin-top: 0.55rem; padding: 0.55rem; }
+    .chip { display: inline-block; padding: 0.15rem 0.4rem; border: 1px solid var(--line); font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; margin-right: 0.25rem; }
+    .chip.ok { color: var(--ok); border-color: #2a6a4e; }
+    .chip.fail { color: var(--crit); border-color: #6a2a2a; }
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.45rem; margin-bottom: 0.7rem; }
+    .stat { background: #0c1612; border: 1px solid var(--line); padding: 0.55rem; }
+    .stat b { display: block; font-family: "IBM Plex Mono", monospace; font-size: 1.2rem; }
+    .stat span { color: var(--muted); font-size: 0.75rem; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+    th, td { text-align: left; padding: 0.4rem 0.3rem; border-bottom: 1px solid var(--line); vertical-align: top; }
     th { color: var(--muted); font-weight: 500; }
-    code, .mono { font-family: "IBM Plex Mono", monospace; font-size: 0.82rem; }
-    .sev { font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; text-transform: uppercase; }
+    code, .mono { font-family: "IBM Plex Mono", monospace; font-size: 0.8rem; }
+    .sev { font-family: "IBM Plex Mono", monospace; font-size: 0.7rem; text-transform: uppercase; }
     .sev.critical { color: var(--crit); }
     .sev.warn { color: var(--warn); }
-    .sev.info { color: var(--accent); }
-    .hidden { display: none; }
-    .la {
-      width: 100%;
-      height: 220px;
-      background: #050807;
-      border: 1px solid var(--line);
+    .la { width: 100%; height: 210px; background: #050807; border: 1px solid var(--line); }
+    .console {
+      background: #050807; border: 1px solid var(--line); padding: 0.65rem 0.75rem;
+      font-family: "IBM Plex Mono", monospace; font-size: 0.78rem; line-height: 1.5;
+      min-height: 6.2rem; white-space: pre-wrap; color: #b7e8cf;
     }
-    .plan-step {
-      border-left: 3px solid var(--accent);
-      padding: 0.5rem 0.7rem;
-      margin: 0.4rem 0;
-      background: #0c1612;
-    }
-    .plan-step strong { font-family: "IBM Plex Mono", monospace; font-size: 0.85rem; }
+    .plan-step { border-left: 3px solid var(--accent); padding: 0.4rem 0.6rem; margin: 0.35rem 0; background: #0c1612; }
+    .plan-step strong { font-family: "IBM Plex Mono", monospace; font-size: 0.82rem; }
     .muted { color: var(--muted); }
-    pre {
-      margin: 0;
-      overflow: auto;
-      font-family: "IBM Plex Mono", monospace;
-      font-size: 0.78rem;
-      line-height: 1.45;
-      background: #050807;
-      padding: 0.8rem;
-      border: 1px solid var(--line);
-      color: #b7e8cf;
-    }
-    footer { color: var(--muted); font-size: 0.85rem; margin-top: 1.2rem; }
+    pre { margin: 0; overflow: auto; font: 0.75rem/1.45 "IBM Plex Mono", monospace; background: #050807; padding: 0.7rem; border: 1px solid var(--line); color: #b7e8cf; max-height: 220px; }
+    .col { font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.35rem; }
+    .col.fw { color: var(--fw); }
+    .col.hw { color: var(--hw); }
+    footer { color: var(--muted); font-size: 0.82rem; margin-top: 1rem; }
+    .split { display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem; }
+    @media (max-width: 700px) { .split { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <div class="brand">Bringup Bench · Live Demo</div>
-    <h1>MCU first-power, agentic</h1>
+    <div class="brand">Bringup Bench · in-browser MCU lab</div>
+    <h1>Change the board. Watch the buses.</h1>
     <p class="sub">
-      Simulated STM32F411 + light sensor + IMU. Switch scenarios, read the logic-analyzer
-      lanes, then inspect the agent plan. No backend — GitHub Pages only.
+      This is a real simulator in your browser — not a screenshot. Flip firmware vs hardware,
+      hit <strong>Run probe</strong>, and traces / findings / C stubs update immediately.
     </p>
-    <div class="row">
-      <button class="primary" type="button" data-scenario="first-power">first-power</button>
-      <button type="button" data-scenario="clock-gate">clock-gate</button>
-      <button type="button" data-scenario="clean">clean</button>
-      <button type="button" data-view="trace" class="active">Traces</button>
-      <button type="button" data-view="plan">Agent plan</button>
-      <button type="button" data-view="stubs">C stubs</button>
-      <a class="btn" href="https://github.com/Amiirhosseini/bringup-bench">GitHub</a>
+
+    <div class="layout">
+      <aside class="panel">
+        <h2>Controls</h2>
+        <p class="hint">Presets load a broken or clean board. Then tweak anything.</p>
+        <div class="row">
+          <button type="button" data-preset="first-power" class="active">first-power</button>
+          <button type="button" data-preset="clock-gate">clock-gate</button>
+          <button type="button" data-preset="clean">clean</button>
+        </div>
+
+        <div class="col fw">Firmware (what the MCU driver does)</div>
+        <label>I2C 7-bit address
+          <select id="fw-i2c">
+            <option value="68">0x44 (datasheet, ADDR=GND)</option>
+            <option value="69" selected>0x45 (wrong / ADDR=VDD)</option>
+          </select>
+        </label>
+        <label>SPI mode (CPOL/CPHA)
+          <select id="fw-spi">
+            <option value="0">mode 0 — idle low, sample rising</option>
+            <option value="1">mode 1</option>
+            <option value="2">mode 2</option>
+            <option value="3" selected>mode 3 — eval-kit leftover</option>
+          </select>
+        </label>
+        <label>UART baud
+          <select id="fw-uart">
+            <option value="9600">9600</option>
+            <option value="57600">57600</option>
+            <option value="115200" selected>115200</option>
+          </select>
+        </label>
+        <label class="toggle"><input type="checkbox" id="fw-i2c-clk" checked /> I2C1 clock enabled</label>
+        <label class="toggle"><input type="checkbox" id="fw-spi-clk" checked /> SPI1 clock enabled</label>
+        <label class="toggle"><input type="checkbox" id="fw-pinmux" /> INT1 mapped to PB4 EXTI</label>
+
+        <div class="col hw" style="margin-top:0.8rem">Hardware (what is actually on the PCB)</div>
+        <label>OPT3001 ADDR pin
+          <select id="hw-i2c">
+            <option value="68" selected>GND → 0x44</option>
+            <option value="69">VDD → 0x45</option>
+          </select>
+        </label>
+        <label>IMU SPI mode (datasheet)
+          <select id="hw-spi">
+            <option value="0" selected>mode 0</option>
+            <option value="3">mode 3</option>
+          </select>
+        </label>
+        <label>Factory fixture baud
+          <select id="hw-uart">
+            <option value="57600" selected>57600</option>
+            <option value="115200">115200</option>
+          </select>
+        </label>
+
+        <button class="probe" type="button" id="probe">Run probe (WHO_AM_I + UART ping)</button>
+      </aside>
+
+      <main>
+        <section class="stats" id="stats"></section>
+        <section class="panel">
+          <h2>Probe console</h2>
+          <div class="console" id="console">Idle. Change a control or press Run probe.</div>
+        </section>
+        <section class="panel">
+          <h2>Logic analyzer <span class="muted" id="la-meta"></span></h2>
+          <svg class="la" id="la" viewBox="0 0 1000 210" preserveAspectRatio="none"></svg>
+        </section>
+        <section class="panel">
+          <h2>Findings</h2>
+          <table>
+            <thead><tr><th>Sev</th><th>Code</th><th>Resource</th><th>Fix</th></tr></thead>
+            <tbody id="findings"></tbody>
+          </table>
+        </section>
+        <div class="split">
+          <section class="panel">
+            <h2>Agent plan</h2>
+            <div id="plan"></div>
+          </section>
+          <section class="panel">
+            <h2>Generated C (from hardware truth)</h2>
+            <pre id="stub"></pre>
+          </section>
+        </div>
+      </main>
     </div>
-    <section class="stats" id="stats"></section>
-    <section class="panel">
-      <h2 id="board-line">nucleo-f411-devkit · STM32F411CEU6</h2>
-      <svg class="la" id="la" viewBox="0 0 1000 220" preserveAspectRatio="none" aria-label="Logic analyzer"></svg>
-      <p class="muted" id="la-cap" style="margin:0.5rem 0 0;font-size:0.82rem;"></p>
-    </section>
-    <section id="view-trace" class="panel">
-      <h2>Findings</h2>
-      <table>
-        <thead><tr><th>Sev</th><th>Code</th><th>Resource</th><th>Title</th></tr></thead>
-        <tbody id="findings"></tbody>
-      </table>
-    </section>
-    <section id="view-plan" class="panel hidden">
-      <h2>Plan · <span class="mono" id="plan-goal"></span></h2>
-      <div id="plan"></div>
-    </section>
-    <section id="view-stubs" class="panel hidden">
-      <h2>Generated driver stub (review before flash)</h2>
-      <pre id="stub"></pre>
-    </section>
     <footer>
-      Static demo of <a href="https://github.com/Amiirhosseini/bringup-bench">Amiirhosseini/bringup-bench</a>.
-      Clone and run <code>bringup health</code> for the Python toolkit + Hermes skills.
+      Runs entirely in this page (GitHub Pages). Source:
+      <a href="https://github.com/Amiirhosseini/bringup-bench">Amiirhosseini/bringup-bench</a>
     </footer>
   </div>
+
   <script>
-    const DATA = {
-      "first-power": {
-        label: "First power — typical bring-up faults",
-        stats: { critical: 2, warn: 2, i2c: "NACK 0x45", spi: "mode 3≠0", uart: "115200≠57600" },
-        findings: [
-          { s: "critical", c: "i2c.addr_mismatch", r: "opt3001", t: "Firmware 0x45, device 0x44" },
-          { s: "critical", c: "spi.mode_mismatch", r: "imu-lsm6", t: "Driver mode 3, device mode 0" },
-          { s: "warn", c: "uart.baud_mismatch", r: "console", t: "Firmware 115200 vs fixture 57600" },
-          { s: "warn", c: "gpio.pinmux", r: "imu-int1", t: "EXTI still on SPI CS path" }
-        ],
-        lanes: [
-          { name: "I2C", color: "var(--i2c)", pattern: "nack" },
-          { name: "SPI", color: "var(--spi)", pattern: "badmode" },
-          { name: "UART", color: "var(--uart)", pattern: "framing" },
-          { name: "INT1", color: "var(--gpio)", pattern: "idle" }
-        ],
-        goal: "why does I2C NACK and SPI WHO_AM_I read 0x00",
-        plan: [
-          { n: "capture_trace", w: "Record I2C/SPI/UART/GPIO window" },
-          { n: "diagnose", w: "Rank clocks + bus findings" },
-          { n: "i2c_scan", w: "Scan 7-bit addresses vs firmware 0x45" },
-          { n: "fix_i2c_addr", w: "ADDR pin GND → 0x44" },
-          { n: "check_spi_mode", w: "Set CPOL/CPHA to mode 0" }
-        ],
-        stub: `/* opt3001.c — hardware truth, not the broken driver */\n#define OPT3001_ADDR  (0x44u)\n\nint opt3001_whoami(uint8_t *id) {\n    uint8_t reg = 0x7E;\n    if (i2c_write("i2c1", OPT3001_ADDR, &reg, 1) != 0)\n        return -1;\n    return i2c_read("i2c1", OPT3001_ADDR, id, 1);\n}`
-      },
-      "clock-gate": {
-        label: "SPI1 clock gate left off after reset",
-        stats: { critical: 1, warn: 0, i2c: "ACK 0x44", spi: "SCK idle", uart: "57600 OK" },
-        findings: [
-          { s: "critical", c: "clock.gated", r: "imu-lsm6", t: "SPI1 RCC gate off — no SCK" }
-        ],
-        lanes: [
-          { name: "I2C", color: "var(--i2c)", pattern: "ok" },
-          { name: "SPI", color: "var(--spi)", pattern: "idle" },
-          { name: "UART", color: "var(--uart)", pattern: "ok" },
-          { name: "INT1", color: "var(--gpio)", pattern: "irq" }
-        ],
-        goal: "SPI SCK stuck low during CS",
-        plan: [
-          { n: "capture_trace", w: "Confirm CS with no clocks" },
-          { n: "enable_clocks", w: "Ungate SPI1 in RCC before first xfer" }
-        ],
-        stub: `void board_clocks_enable(void) {\n    rcc_enable("I2C1");\n    rcc_enable("SPI1");  /* was missing */\n    rcc_enable("USART2");\n}`
-      },
-      clean: {
-        label: "Healthy board after bring-up",
-        stats: { critical: 0, warn: 0, i2c: "WHO=0x54", spi: "WHO=0x6A", uart: "echo OK" },
-        findings: [],
-        lanes: [
-          { name: "I2C", color: "var(--i2c)", pattern: "ok" },
-          { name: "SPI", color: "var(--spi)", pattern: "ok" },
-          { name: "UART", color: "var(--uart)", pattern: "ok" },
-          { name: "INT1", color: "var(--gpio)", pattern: "irq" }
-        ],
-        goal: "confirm clean bring-up",
-        plan: [
-          { n: "capture_trace", w: "Re-record buses" },
-          { n: "diagnose", w: "Expect zero critical findings" }
-        ],
-        stub: `/* All whoami paths match datasheet. Ready for feature work. */`
-      }
+    const hex = (n) => "0x" + Number(n).toString(16).toUpperCase().padStart(2, "0");
+
+    const PRESETS = {
+      "first-power": { fwI2c: 0x45, hwI2c: 0x44, fwSpi: 3, hwSpi: 0, fwUart: 115200, hwUart: 57600, i2cClk: true, spiClk: true, pinmux: false },
+      "clock-gate": { fwI2c: 0x44, hwI2c: 0x44, fwSpi: 0, hwSpi: 0, fwUart: 57600, hwUart: 57600, i2cClk: true, spiClk: false, pinmux: true },
+      clean: { fwI2c: 0x44, hwI2c: 0x44, fwSpi: 0, hwSpi: 0, fwUart: 57600, hwUart: 57600, i2cClk: true, spiClk: true, pinmux: true }
     };
 
-    function wave(pattern, y, color) {
-      const h = 18;
-      let d = `M 40 ${y}`;
-      if (pattern === "nack") {
-        d += ` h 40 v -${h} h 20 v ${h} h 30 v -${h} h 12 v ${h} h 80`;
-      } else if (pattern === "badmode") {
-        d += ` h 50 v -${h} h 8 v ${h} h 8 v -${h} h 8 v ${h} h 8 v -${h} h 8 v ${h} h 60`;
-      } else if (pattern === "framing") {
-        d += ` h 30 v -${h} h 50 v ${h/2} h 40 v ${h/2} h 70`;
-      } else if (pattern === "idle") {
-        d += ` h 220`;
-      } else if (pattern === "irq") {
-        d += ` h 90 v -${h} h 20 v ${h} h 110`;
-      } else {
-        d += ` h 20 v -${h} h 16 v ${h} h 16 v -${h} h 16 v ${h} h 16 v -${h} h 16 v ${h} h 40`;
-      }
-      return `<path d="${d}" fill="none" stroke="${color}" stroke-width="2"/>`;
+    function readState() {
+      return {
+        fwI2c: Number(document.getElementById("fw-i2c").value),
+        hwI2c: Number(document.getElementById("hw-i2c").value),
+        fwSpi: Number(document.getElementById("fw-spi").value),
+        hwSpi: Number(document.getElementById("hw-spi").value),
+        fwUart: Number(document.getElementById("fw-uart").value),
+        hwUart: Number(document.getElementById("hw-uart").value),
+        i2cClk: document.getElementById("fw-i2c-clk").checked,
+        spiClk: document.getElementById("fw-spi-clk").checked,
+        pinmux: document.getElementById("fw-pinmux").checked
+      };
     }
 
-    function drawLA(lanes) {
-      const svg = document.getElementById("la");
-      let g = `<rect x="0" y="0" width="1000" height="220" fill="#050807"/>`;
+    function writeState(s) {
+      document.getElementById("fw-i2c").value = String(s.fwI2c);
+      document.getElementById("hw-i2c").value = String(s.hwI2c);
+      document.getElementById("fw-spi").value = String(s.fwSpi);
+      document.getElementById("hw-spi").value = String(s.hwSpi);
+      document.getElementById("fw-uart").value = String(s.fwUart);
+      document.getElementById("hw-uart").value = String(s.hwUart);
+      document.getElementById("fw-i2c-clk").checked = s.i2cClk;
+      document.getElementById("fw-spi-clk").checked = s.spiClk;
+      document.getElementById("fw-pinmux").checked = s.pinmux;
+    }
+
+    function simulate(s) {
+      const i2cOk = s.i2cClk && s.fwI2c === s.hwI2c;
+      const spiOk = s.spiClk && s.fwSpi === s.hwSpi;
+      const uartOk = s.fwUart === s.hwUart;
+      const findings = [];
+
+      if (!s.i2cClk) findings.push({ sev: "critical", code: "clock.gated", res: "opt3001", title: "I2C1 clock gate off", fix: "Enable I2C1 in RCC before the first START" });
+      else if (!i2cOk) findings.push({ sev: "critical", code: "i2c.addr_mismatch", res: "opt3001", title: `Firmware ${hex(s.fwI2c)}, device ${hex(s.hwI2c)}`, fix: "Match 7-bit address to ADDR pin / datasheet" });
+
+      if (!s.spiClk) findings.push({ sev: "critical", code: "clock.gated", res: "imu-lsm6", title: "SPI1 clock gate off — SCK idle", fix: "Enable SPI1 in RCC; confirm AF on PA5" });
+      else if (!spiOk) findings.push({ sev: "critical", code: "spi.mode_mismatch", res: "imu-lsm6", title: `Driver mode ${s.fwSpi}, device mode ${s.hwSpi}`, fix: "Set CPOL/CPHA to the IMU datasheet mode" });
+
+      if (!uartOk) findings.push({ sev: "warn", code: "uart.baud_mismatch", res: "console", title: `Firmware ${s.fwUart} vs fixture ${s.hwUart}`, fix: "Recompute USART_BRR for the fixture baud" });
+      if (!s.pinmux) findings.push({ sev: "warn", code: "gpio.pinmux", res: "imu-int1", title: "INT1 not mapped to PB4 EXTI", fix: "Keep PA4 as SPI CS; map INT1 to PB4" });
+
+      const probes = {
+        i2c: !s.i2cClk ? { ok: false, msg: "no SCL (clock gated)" }
+          : i2cOk ? { ok: true, msg: `ACK ${hex(s.hwI2c)} WHO_AM_I=0x54` }
+          : { ok: false, msg: `NACK ${hex(s.fwI2c)}` },
+        spi: !s.spiClk ? { ok: false, msg: "CS low, SCK stuck 0" }
+          : spiOk ? { ok: true, msg: "WHO_AM_I=0x6A" }
+          : { ok: false, msg: "WHO_AM_I=0x00 (wrong edge)" },
+        uart: uartOk ? { ok: true, msg: `echo 'U' @ ${s.hwUart}` }
+          : { ok: false, msg: "FRAMING_ERROR / garbage 0xC3" },
+        irq: s.pinmux ? { ok: true, msg: "EXTI4 falling edge" } : { ok: false, msg: "INT high, no EXTI" }
+      };
+
+      const steps = [{ n: "capture_trace", w: "Record I2C/SPI/UART/GPIO window" }, { n: "diagnose", w: "Rank findings from clocks + buses" }];
+      if (!s.i2cClk || !s.spiClk) steps.push({ n: "enable_clocks", w: "Ungate I2C1/SPI1 in RCC before first xfer" });
+      if (s.i2cClk && !i2cOk) { steps.push({ n: "i2c_scan", w: "Scan 7-bit addresses" }); steps.push({ n: "fix_i2c_addr", w: `Set driver to ${hex(s.hwI2c)}` }); }
+      if (s.spiClk && !spiOk) steps.push({ n: "check_spi_mode", w: `Set SPI mode ${s.hwSpi}` });
+      if (!uartOk) steps.push({ n: "match_uart_baud", w: `USART_BRR = ${s.hwUart}` });
+      if (!s.pinmux) steps.push({ n: "fix_pinmux", w: "Map INT1 to PB4 EXTI" });
+      if (!findings.length) steps.push({ n: "generate_stubs", w: "Board is clean — emit whoami stubs" });
+
+      const stub = [
+        "/* Generated from current hardware settings — review before flash */",
+        `#define OPT3001_ADDR  (${hex(s.hwI2c)}u)`,
+        `spi_set_mode("spi1", ${s.hwSpi});`,
+        `usart_set_baud("usart2", ${s.hwUart});`,
+        s.spiClk && s.i2cClk ? "rcc_enable(\"I2C1\"); rcc_enable(\"SPI1\");" : "/* clocks still gated in firmware */",
+        s.pinmux ? "/* PB4 EXTI4 for IMU INT1 */" : "/* TODO: remap INT1 off SPI CS */"
+      ].join("\n");
+
+      return { findings, probes, steps, stub, i2cOk, spiOk, uartOk };
+    }
+
+    function lanePath(kind, y) {
+      const h = 16;
+      if (kind === "nack") return `M 70 ${y} h 50 v -${h} h 18 v ${h} h 40 v -${h} h 10 v ${h} h 120`;
+      if (kind === "ack") return `M 70 ${y} h 30 v -${h} h 14 v ${h} h 14 v -${h} h 14 v ${h} h 14 v -${h} h 14 v ${h} h 80`;
+      if (kind === "idle") return `M 70 ${y} h 220`;
+      if (kind === "clocks") return `M 70 ${y} h 40 v -${h} h 8 v ${h} h 8 v -${h} h 8 v ${h} h 8 v -${h} h 8 v ${h} h 8 v -${h} h 8 v ${h} h 50`;
+      if (kind === "framing") return `M 70 ${y} h 35 v -${h} h 55 v ${h / 2} h 40 v ${h / 2} h 70`;
+      if (kind === "irq") return `M 70 ${y} h 90 v -${h} h 18 v ${h} h 110`;
+      return `M 70 ${y} h 220`;
+    }
+
+    function drawLA(sim) {
+      const lanes = [
+        { name: "I2C", color: "#5ee0a8", kind: !readState().i2cClk ? "idle" : sim.i2cOk ? "ack" : "nack" },
+        { name: "SPI", color: "#6ab4ff", kind: !readState().spiClk ? "idle" : sim.spiOk ? "clocks" : "clocks" },
+        { name: "UART", color: "#e0b45e", kind: sim.uartOk ? "ack" : "framing" },
+        { name: "INT1", color: "#c98cff", kind: readState().pinmux ? "irq" : "idle" }
+      ];
+      let g = `<rect width="1000" height="210" fill="#050807"/>`;
       lanes.forEach((ln, i) => {
-        const y = 40 + i * 48;
-        g += `<text x="8" y="${y + 4}" fill="${ln.color}" font-size="12" font-family="IBM Plex Mono">${ln.name}</text>`;
-        g += `<line x1="40" y1="${y}" x2="980" y2="${y}" stroke="#1e332c" stroke-width="1"/>`;
-        g += wave(ln.pattern, y, ln.color);
+        const y = 36 + i * 46;
+        g += `<text x="10" y="${y + 4}" fill="${ln.color}" font-size="12" font-family="IBM Plex Mono">${ln.name}</text>`;
+        g += `<line x1="60" y1="${y}" x2="980" y2="${y}" stroke="#1e332c"/>`;
+        g += `<path d="${lanePath(ln.kind, y)}" fill="none" stroke="${ln.color}" stroke-width="2"/>`;
       });
-      svg.innerHTML = g;
+      document.getElementById("la").innerHTML = g;
     }
 
-    let scenario = "first-power";
-    let view = "trace";
+    function render(logLines) {
+      const s = readState();
+      const sim = simulate(s);
+      const crit = sim.findings.filter(f => f.sev === "critical").length;
+      const warn = sim.findings.filter(f => f.sev === "warn").length;
+      document.getElementById("stats").innerHTML = `
+        <div class="stat"><b>${crit}</b><span>critical</span></div>
+        <div class="stat"><b>${warn}</b><span>warn</span></div>
+        <div class="stat"><b>${sim.findings.length ? "FAIL" : "PASS"}</b><span>board probe</span></div>`;
+      document.getElementById("findings").innerHTML = sim.findings.length
+        ? sim.findings.map(f => `<tr><td class="sev ${f.sev}">${f.sev}</td><td><code>${f.code}</code></td><td class="mono">${f.res}</td><td>${f.fix}</td></tr>`).join("")
+        : `<tr><td colspan="4" class="muted">No findings. WHO_AM_I paths match. Safe to move on.</td></tr>`;
+      document.getElementById("plan").innerHTML = sim.steps.map((st, i) =>
+        `<div class="plan-step"><strong>${i + 1}. ${st.n}</strong><div class="muted">${st.w}</div></div>`
+      ).join("");
+      document.getElementById("stub").textContent = sim.stub;
+      document.getElementById("la-meta").textContent = `· I2C ${hex(s.fwI2c)}→${hex(s.hwI2c)} · SPI m${s.fwSpi}/m${s.hwSpi} · UART ${s.fwUart}/${s.hwUart}`;
+      drawLA(sim);
 
-    function render() {
-      const d = DATA[scenario];
-      document.getElementById("board-line").textContent =
-        `nucleo-f411-devkit · STM32F411CEU6 · ${d.label}`;
-      document.getElementById("stats").innerHTML = Object.entries(d.stats).map(([k, v]) =>
-        `<div class="stat"><b>${v}</b><span>${k}</span></div>`
-      ).join("");
-      document.getElementById("findings").innerHTML = d.findings.length
-        ? d.findings.map(f =>
-            `<tr><td class="sev ${f.s}">${f.s}</td><td><code>${f.c}</code></td><td class="mono">${f.r}</td><td>${f.t}</td></tr>`
-          ).join("")
-        : `<tr><td colspan="4" class="muted">No findings. Buses look clean.</td></tr>`;
-      document.getElementById("plan-goal").textContent = d.goal;
-      document.getElementById("plan").innerHTML = d.plan.map((s, i) =>
-        `<div class="plan-step"><strong>${i + 1}. ${s.n}</strong><div class="muted">${s.w}</div></div>`
-      ).join("");
-      document.getElementById("stub").textContent = d.stub;
-      document.getElementById("la-cap").textContent =
-        "Lanes: I2C SCL/SDA · SPI SCK/MOSI · UART TX · IMU INT1  (schematic, not a scope dump)";
-      drawLA(d.lanes);
-      ["trace", "plan", "stubs"].forEach(v => {
-        document.getElementById(`view-${v}`).classList.toggle("hidden", v !== view);
-      });
-      document.querySelectorAll("button[data-view]").forEach(b => {
-        b.classList.toggle("active", b.dataset.view === view);
-      });
-      document.querySelectorAll("button[data-scenario]").forEach(b => {
-        b.classList.toggle("active", b.dataset.scenario === scenario);
-        b.classList.toggle("primary", b.dataset.scenario === scenario);
-      });
+      const lines = logLines || [
+        `$ bringup probe`,
+        `I2C  ${sim.probes.i2c.ok ? "PASS" : "FAIL"}  ${sim.probes.i2c.msg}`,
+        `SPI  ${sim.probes.spi.ok ? "PASS" : "FAIL"}  ${sim.probes.spi.msg}`,
+        `UART ${sim.probes.uart.ok ? "PASS" : "FAIL"}  ${sim.probes.uart.msg}`,
+        `IRQ  ${sim.probes.irq.ok ? "PASS" : "FAIL"}  ${sim.probes.irq.msg}`
+      ];
+      document.getElementById("console").textContent = lines.join("\n");
     }
 
-    document.querySelectorAll("button[data-scenario]").forEach(b => {
-      b.addEventListener("click", () => { scenario = b.dataset.scenario; render(); });
+    async function runProbe() {
+      const s = readState();
+      const sim = simulate(s);
+      const steps = [
+        "$ bringup probe --whoami",
+        "enabling RCC…",
+        `I2C START + ADDR ${hex(s.fwI2c)} WRITE`,
+        sim.probes.i2c.ok ? `  ACK  WHO_AM_I=0x54` : `  ${sim.probes.i2c.msg}`,
+        `SPI CS↓  MOSI 0x8F (WHO_AM_I)`,
+        `  ${sim.probes.spi.msg}`,
+        `UART ping 0x55 @ ${s.fwUart}`,
+        `  ${sim.probes.uart.msg}`,
+        sim.findings.length ? `result FAIL  ${sim.findings.length} finding(s)` : "result PASS  board matches schematic"
+      ];
+      const box = document.getElementById("console");
+      box.textContent = "";
+      for (const line of steps) {
+        box.textContent += line + "\n";
+        await new Promise(r => setTimeout(r, 90));
+      }
+      render(box.textContent.trim().split("\n"));
+    }
+
+    function applyPreset(name) {
+      writeState(PRESETS[name]);
+      document.querySelectorAll("[data-preset]").forEach(b => b.classList.toggle("active", b.dataset.preset === name));
+      render();
+    }
+
+    document.querySelectorAll("[data-preset]").forEach(b => {
+      b.addEventListener("click", () => applyPreset(b.dataset.preset));
     });
-    document.querySelectorAll("button[data-view]").forEach(b => {
-      b.addEventListener("click", () => { view = b.dataset.view; render(); });
+    ["fw-i2c","hw-i2c","fw-spi","hw-spi","fw-uart","hw-uart","fw-i2c-clk","fw-spi-clk","fw-pinmux"].forEach(id => {
+      document.getElementById(id).addEventListener("change", () => {
+        document.querySelectorAll("[data-preset]").forEach(b => b.classList.remove("active"));
+        render();
+      });
     });
-    render();
+    document.getElementById("probe").addEventListener("click", runProbe);
+    applyPreset("first-power");
   </script>
 </body>
 </html>

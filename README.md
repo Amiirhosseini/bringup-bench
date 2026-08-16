@@ -3,7 +3,7 @@
 **Agentic MCU board bring-up** — clock trees, I2C/SPI/UART traces, pinmux, and reviewable C driver stubs — with [Hermes Agent](https://hermes-agent.nousresearch.com/) skills and an MCP server.
 
 > **Live demo:** [amiirhosseini.github.io/bringup-bench](https://amiirhosseini.github.io/bringup-bench/)  
-> Switch `first-power` / `clock-gate` / `clean`, read analyzer lanes, inspect the agent plan.
+> In-browser MCU lab — change I2C address, SPI mode, UART baud, clock gates; traces and findings update immediately. No server.
 
 New boards fail in the same few ways: wrong 7-bit I2C address, SPI mode leftover from an eval kit, UART baud vs the factory fixture, RCC clock still gated, EXTI sharing a SPI chip-select. Bringup Bench turns those into **ranked findings** and **inspectable plans** you can run offline.
 
